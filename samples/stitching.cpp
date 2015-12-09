@@ -50,19 +50,34 @@ using namespace std;
 using namespace cv;
 
 bool try_use_gpu = false;
-vector<Mat> imgs;
 string result_name = "result.jpg";
 
 void printUsage();
-int parseCmdArgs(int argc, char** argv);
+int parseCmdArgs(int argc, char** argv, vector<Mat>& imgs);
 
 int main(int argc, char* argv[])
 {
-    int retval = parseCmdArgs(argc, argv);
+    vector<Mat> imgs;
+    int retval = parseCmdArgs(argc, argv, imgs);
     if (retval) return -1;
 
     Mat pano;
     Stitcher stitcher = Stitcher::createDefault(try_use_gpu);
+
+    float match_conf = 0.1; // defaults to 0.3f;
+    stitcher.setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu, match_conf));
+
+    //stitcher.setRegistrationResol(0.6); /// 0.6
+    //stitcher.setSeamEstimationResol(0.1);   /// 0.1
+    //stitcher.setCompositingResol(1);   //1
+    stitcher.setPanoConfidenceThresh(0.1);   //1
+    //stitcher.setRegistrationResol(-1); /// 0.6
+    //stitcher.setSeamEstimationResol(-1);   /// 0.1
+    //stitcher.setCompositingResol(-1);   //1
+    //stitcher.setPanoConfidenceThresh(-1);   //1
+    //stitcher.setWaveCorrection(true);
+    //stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
+
     Stitcher::Status status = stitcher.stitch(imgs, pano);
 
     if (status != Stitcher::OK)
@@ -90,7 +105,7 @@ void printUsage()
 }
 
 
-int parseCmdArgs(int argc, char** argv)
+int parseCmdArgs(int argc, char** argv, vector<Mat>& imgs)
 {
     if (argc == 1)
     {
@@ -125,6 +140,7 @@ int parseCmdArgs(int argc, char** argv)
         else
         {
             Mat img = imread(argv[i]);
+            cout << "Image " << i << ": " << argv[i] << endl;
             if (img.empty())
             {
                 cout << "Can't read image '" << argv[i] << "'\n";
