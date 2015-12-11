@@ -13,4 +13,5 @@ file(GLOB OpenCV_LIBS /usr/local/Cellar/opencv3/3.0.0/lib/*) # The following var
 
 #SET(OpenCV_LIBS "${OpenCV_LIBS}")
 
-add_subdirectory(samples)
+add_executable( feature_matching feature_matching.cpp )
+target_link_libraries( feature_matching ${OpenCV_LIBS} )
