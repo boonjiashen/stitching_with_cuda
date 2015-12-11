@@ -354,6 +354,39 @@ static int parseCmdArgs(int argc, char** argv)
     return 0;
 }
 
+void displayPairwiseMatches(const vector<MatchesInfo>& pairwise_matches,
+        const vector<Mat>& images,
+        const vector<ImageFeatures>& features) {
+
+    // Display pairwise matching results
+    for (auto& pairwise_match : pairwise_matches) {
+        int from = pairwise_match.src_img_idx;
+        int to = pairwise_match.dst_img_idx;
+        if (from < 0 || to < 0) { continue; }
+        if (from >= to) { continue; }
+
+        Mat img_matches;
+        Mat img_1 = images[from];
+        Mat img_2 = images[to];
+        vector<KeyPoint> keypoints_1 = features[from].keypoints;
+        vector<KeyPoint> keypoints_2 = features[to].keypoints;
+        vector<char> inliers_mask;
+        for (auto& i : pairwise_match.inliers_mask) { inliers_mask.push_back(char(i)); }
+        vector<DMatch> good_matches = pairwise_match.matches;
+
+        drawMatches( img_1, keypoints_1, img_2, keypoints_2,
+                good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                inliers_mask, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+
+        char win_name[20];
+        sprintf(win_name, "%i to %i", from, to);
+        namedWindow(win_name, WINDOW_AUTOSIZE );
+        imshow(win_name, img_matches);
+
+    }
+    waitKey(0);
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -487,33 +520,37 @@ int main(int argc, char* argv[])
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
 
-    // Display pairwise matching results
-    for (auto& pairwise_match : pairwise_matches) {
-        int from = pairwise_match.src_img_idx;
-        int to = pairwise_match.dst_img_idx;
-        if (from < 0 || to < 0) { continue; }
-        if (from >= to) { continue; }
+    //displayPairwiseMatches(pairwise_matches, images, features);
 
-        Mat img_matches;
-        Mat img_1 = images[from];
-        Mat img_2 = images[to];
-        vector<KeyPoint> keypoints_1 = features[from].keypoints;
-        vector<KeyPoint> keypoints_2 = features[to].keypoints;
-        vector<char> inliers_mask;
-        for (auto& i : pairwise_match.inliers_mask) { inliers_mask.push_back(char(i)); }
-        vector<DMatch> good_matches = pairwise_match.matches;
-
-        drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-                good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                inliers_mask, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-        char win_name[20];
-        sprintf(win_name, "%i to %i", from, to);
-        namedWindow(win_name, WINDOW_AUTOSIZE );
-        imshow(win_name, img_matches);
-
+    // Get all descriptors in a Nxk matrix
+    Mat allDescriptors = features[0].descriptors.getMat(ACCESS_RW);
+    for (int i = 1; i < features.size(); ++i) {
+        Mat curr = features[i].descriptors.getMat(ACCESS_RW);
+        vconcat(allDescriptors, curr, allDescriptors);
+        printf("size = (%i, %i)\n", allDescriptors.size[0], allDescriptors.size[1]);
     }
-    waitKey(0);
+
+    if (!allDescriptors.isContinuous()) {
+        cout << "Program cannot proceed because descriptor matrix isn't a continuous array\n";
+        return -1;
+    }
+    /*
+     *Definition of type macros:
+     *https://github.com/Itseez/opencv/blob/master/modules/core/include/opencv2/core/cvdef.h
+     */
+    if (allDescriptors.type() != CV_32F) {
+        cout << "Program cannot proceed because we expected desciptor to be a 32bit float. ";
+        cout << "descriptor type = " << allDescriptors.type() << " != " << CV_32F << endl;
+        return -1;
+    }
+
+    float* allDescriptorsPtr = (float*)allDescriptors.data;
+    int allDescriptorsNumel = allDescriptors.rows * allDescriptors.cols;
+    cout << allDescriptorsNumel << endl;
+
+    for (int i = 0; i < 10; ++i) { cout << allDescriptorsPtr[i] << " "; } cout << endl;
+
+    for (int i = 0; i < 10; ++i) { cout << allDescriptors.at<float>(0, i) << " "; } cout << endl;
 
     // Print dimensionality info
     cout << "Feature type = " << features_type << endl;
