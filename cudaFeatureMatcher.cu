@@ -57,15 +57,85 @@ void cpuComputeDistanceMat(const Matrix descriptors, Matrix distanceMat) {
     }
 }
 
+/*
+ *Pre-conditions:
+ *    start < stop
+ *    0 <= i < mat.height for i = start, stop
+ *Post-conditions:
+ *    Returns submat, which is a view of mat[start:stop][:]
+ *    submat contains rows start, start+1, ..., stop-1 of mat
+ */
+Matrix getSubmatrix(const Matrix mat, const int start, const int stop) {
+    assert(start < stop);
+    assert(0 <= start && start < mat.height);
+    assert(0 <= stop && stop < mat.height);
+
+    Matrix submat;
+    submat.width = mat.width;
+    submat.height = stop - start;
+    submat.elements = mat.elements + start * submat.width;
+
+    return submat;
+}
+
+/*
+ *Pre-conditions:
+ *    mat.height >= 2
+ *    0 <= col < mat.width
+ *Post-conditions:
+ *    mat[idx1][col] and mat[idx2][col] are the smallest and second smallest
+ *    elements in mat[:][col]
+ */
+void getIndexOfTwoSmallestInColumn(const Matrix mat, int col, int& idx1, int& idx2) {
+    assert(mat.height >= 2);
+    assert(0 <= col && col < mat.width);
+
+    float val1 = FLT_MAX, val2 = FLT_MAX;
+    idx1 = -1, idx2 = -1;
+
+    for (int j = 0; j < mat.height; ++j) {
+        float currVal = mat.elements[j * mat.width + col];
+
+        // Push current value to first place
+        if (currVal < val1) {
+            val2 = val1;
+            idx2 = idx1;
+            val1 = currVal;
+            idx1 = j;
+        }
+
+        // Push current value to second place
+        else if (currVal < val2) {
+            val2 = currVal;
+            idx2 = j;
+        }
+    }
+}
+
+void test() {
+    Matrix descriptors = AllocateMatrix(n, k, 1);
+    printMatrix(descriptors);
+    for (int i = 0; i < descriptors.width; ++i) {
+        int idx1, idx2;
+        getIndexOfTwoSmallestInColumn(descriptors, i, idx1, idx2);
+        printf("for col %i, indices are %i, %i, vals are %f %f\n",
+                i, idx1, idx2, descriptors.elements[idx1 * descriptors.width + i],
+                descriptors.elements[idx2 * descriptors.width + i]
+              );
+    }
+    FreeMatrix(&descriptors);
+}
+
+
 int main(void) {
 
-    int n = 10;  // sum of all feature counts
-    int k = 2;  // size of one descriptor
+    int n = 4;  // sum of all feature counts
+    int k = 4;  // size of one descriptor
 
     Matrix descriptors = AllocateMatrix(n, k, 1);
     Matrix distanceMat = AllocateMatrix(n, n, 0);
+
     cpuComputeDistanceMat(descriptors, distanceMat);
-    printMatrix(descriptors);
     printMatrix(distanceMat);
 
     FreeMatrix(&descriptors);
