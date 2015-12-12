@@ -52,9 +52,6 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////
 // declarations, forward
 
-extern "C"
-void computeGold(float*, const float*, const float*, unsigned int, unsigned int);
-
 Matrix AllocateDeviceMatrix(const Matrix M);
 Matrix AllocateMatrix(int height, int width, int init);
 void CopyToDeviceMatrix(Matrix Mdevice, const Matrix Mhost);
@@ -204,11 +201,11 @@ int main(int argc, char** argv) {
     ConvolutionOnDevice(M, N, P);
     GPU_inclusive_ms = GPUTimer.toc();
     
-    // compute the matrix multiplication on the CPU for comparison
-    Matrix reference = AllocateMatrix(P.height, P.width, 0);
-    CPUTimer.tic();
-    computeGold(reference.elements, M.elements, N.elements, N.height, N.width);
-    CPU_ms = CPUTimer.toc();
+    /*// compute the matrix multiplication on the CPU for comparison*/
+    /*Matrix reference = AllocateMatrix(P.height, P.width, 0);*/
+    /*CPUTimer.tic();*/
+    /*computeGold(reference.elements, M.elements, N.elements, N.height, N.width);*/
+    /*CPU_ms = CPUTimer.toc();*/
 
     printf("<P_height>%i</P_height>\n"
             "<P_width>%i</P_width>\n"
@@ -218,8 +215,8 @@ int main(int argc, char** argv) {
         
     // in this case check if the result is equivalent to the expected soluion
 
-    bool res = CompareResults(reference.elements, P.elements, P.width * P.height, 0.01f);;
-    printf("Test %s\n", (1 == res) ? "PASSED" : "FAILED");
+    /*bool res = CompareResults(reference.elements, P.elements, P.width * P.height, 0.01f);;*/
+    /*printf("Test %s\n", (1 == res) ? "PASSED" : "FAILED");*/
     
     if(argc == 5)
     {
