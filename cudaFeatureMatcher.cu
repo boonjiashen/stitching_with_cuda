@@ -217,6 +217,7 @@ void cumsum(T* src, T* dst, int length) {
  *    `allDescriptors` is a n x k matrix
  *    numDescriptors = [n1, n2, ..., n_m] where n_i is the number of descriptors
  *    of image i and m is numImages
+ *    n = sum(n1, n2, ..., n_m)
  *Post-conditions:
  *    Prints the feature correspondence between each image pair, based on
  *    OpenCV's Best2NearestMatcher
