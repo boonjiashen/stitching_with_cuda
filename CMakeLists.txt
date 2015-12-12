@@ -27,6 +27,7 @@ endif()
 #target_link_libraries( feature_matching ${OpenCV_LIBS} )
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;-arch=compute_50;-code=sm_50,compute_50;-m=64)
 #add_subdirectory(util)
 Include(ParallelUtils.cmake)
 enable_cuda_support()
