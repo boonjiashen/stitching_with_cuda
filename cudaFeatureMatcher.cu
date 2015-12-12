@@ -196,36 +196,103 @@ void computeCorrespondenceMat(const Matrix distanceMat, int* cumNumDescriptors,
     }
 }
 
-std::vector<std::set<match> > computeCorrespondence(const Matrix& allDescriptors,
-        int* numDescriptors, int numImages) {
+/*
+ *Pre-conditions:
+ *    src and dst are arrays of length `length`.
+ *    length > 0
+ *Post-conditions:
+ *    dst is the cumulative sum of src.
+ */
+template<typename T>
+void cumsum(T* src, T* dst, int length) {
+    assert(length > 0);
+    dst[0] = src[0];
+    for (int i = 1; i < length; ++i) {
+        dst[i] = dst[i-1] + src[i];
+    }
+}
+
+/*
+ *Pre-conditions:
+ *    `allDescriptors` is a n x k matrix
+ *    numDescriptors = [n1, n2, ..., n_m] where n_i is the number of descriptors
+ *    of image i and m is numImages
+ *Post-conditions:
+ *    Prints the feature correspondence between each image pair, based on
+ *    OpenCV's Best2NearestMatcher
+ */
+void printCorrespondence(const Matrix& allDescriptors,
+        int* numDescriptors, int numImages, float matchConf) {
     std::vector<std::set<match> > correspondenceSets;
 
-    return correspondenceSets;
+    // cumsum of n_i = [n_0, n_0 + n_1, ..., n]
+    int* cumNumDesc = (int*)malloc(sizeof(int) * (numImages));
+    cumsum<int>(numDescriptors, cumNumDesc, numImages);
+
+    // Compute distance matrix
+    int n = allDescriptors.height;
+    Matrix distanceMat = AllocateMatrix(n, n, 0);
+    cpuComputeDistanceMat(allDescriptors, distanceMat);
+
+    // Compute correspondence matrix
+    Matrix corrMat = AllocateMatrix(numImages, n, 0);
+    computeCorrespondenceMat(distanceMat, cumNumDesc, numImages,
+            corrMat, matchConf);
+
+    std::cout << "distanceMat\n";
+    printMatrix(distanceMat);
+    std::cout << "corrMat\n";
+    printMatrix(corrMat);
+
+    for (int imgIdx1 = 0; imgIdx1 < numImages - 1; ++imgIdx1) {
+        for (int imgIdx2 = imgIdx1 + 1; imgIdx2 < numImages; ++imgIdx2) {
+            int numDescriptors1 = numDescriptors[imgIdx1];
+            int numDescriptors2 = numDescriptors[imgIdx2];
+
+            float* src = NULL;
+
+            // Correspondence from imgIdx2 to imgIdx1
+            src = corrMat.elements + imgIdx1 * n + cumNumDesc[imgIdx2-1];
+            for (int i = 0; i < numDescriptors2; ++i) {
+                if (src[i] > -0.5) {
+                    printf("im%i-%i corr %.0f-%i\n", imgIdx1, imgIdx2, src[i], i);
+                }
+            }
+
+            // Correspondence from imgIdx1 to imgIdx2
+            src = corrMat.elements + imgIdx2 * n +
+                    (imgIdx1 > 0 ? cumNumDesc[imgIdx1-1] : 0);
+            for (int i = 0; i < numDescriptors1; ++i) {
+                if (src[i] > -0.5) {
+                    printf("im%i-%i corr %i-%.0f\n", imgIdx1, imgIdx2, i, src[i]);
+                }
+            }
+
+        }
+    }
+
+    free(cumNumDesc);
 }
 
 int main(void) {
 
     const int numImages = 3;
-    int cumNumDescriptors[] = {2, 5, 9};
+    int numDescriptors[] = {2, 3, 4};
     int k = 4;  // size of one descriptor
-    int n = cumNumDescriptors[numImages - 1];  // sum of all feature counts
+    int n = 9;  // sum of all feature counts
     float matchConf = 0.1;
 
     Matrix descriptors = AllocateMatrix(n, k, 1);
-    Matrix distanceMat = AllocateMatrix(n, n, 0);
-    Matrix corrMat = AllocateMatrix(numImages, n, 0);
 
+    printCorrespondence(descriptors, numDescriptors, numImages, matchConf);
 
-    cpuComputeDistanceMat(descriptors, distanceMat);
-    computeCorrespondenceMat(distanceMat, cumNumDescriptors, numImages,
-            corrMat, matchConf);
-    std::cout << "distanceMat:\n";
-    printMatrix(distanceMat);
-    std::cout << "corrMat:\n";
-    printMatrix(corrMat);
+    /*cpuComputeDistanceMat(descriptors, distanceMat);*/
+    /*computeCorrespondenceMat(distanceMat, cumNumDescriptors, numImages,*/
+            /*corrMat, matchConf);*/
+    /*std::cout << "corrMat:\n";*/
+    /*printMatrix(corrMat);*/
 
     FreeMatrix(&descriptors);
-    FreeMatrix(&distanceMat);
 
     /*cv::Mat image = cv::imread( "outputImages/result.jpg", 1 );*/
     /*printf("size = (%i, %i)\n", image.rows, image.cols);*/
