@@ -21,9 +21,15 @@ endif()
 #include( GenericDebugger.cmake )
 
 # Otherwise we can't use C++11 features
-set(CMAKE_CXX_FLAGS "-std=c++11")
+#set(CMAKE_CXX_FLAGS "-std=c++11")
 
 #add_executable( feature_matching feature_matching.cpp )
 #target_link_libraries( feature_matching ${OpenCV_LIBS} )
 
-add_subdirectory(util)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
+#add_subdirectory(util)
+Include(ParallelUtils.cmake)
+enable_cuda_support()
+#cuda_add_executable(convolution.out 2Dconvolution.cu 2Dconvolution.h CudaTimer.cuh)
+cuda_add_executable(testMatrix testMatrix.cu Matrix.h Matrix.cu CudaTimer.cuh)
+target_link_libraries( testMatrix ${OpenCV_LIBS} )
