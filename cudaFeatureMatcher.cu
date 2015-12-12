@@ -2,6 +2,11 @@
 #include <cassert>
 #include <opencv2/opencv.hpp>
 #include "Matrix.h"
+#include <vector>
+#include <set>
+
+
+typedef std::pair<int, int> match;
 
 /*
  *Source: http://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
@@ -60,7 +65,8 @@ void cpuComputeDistanceMat(const Matrix descriptors, Matrix distanceMat) {
 /*
  *Pre-conditions:
  *    start < stop
- *    0 <= i < mat.height for i = start, stop
+ *    0 <= start < mat.height
+ *    0 < start <= mat.height
  *Post-conditions:
  *    Returns submat, which is a view of mat[start:stop][:]
  *    submat contains rows start, start+1, ..., stop-1 of mat
@@ -68,7 +74,7 @@ void cpuComputeDistanceMat(const Matrix descriptors, Matrix distanceMat) {
 Matrix getSubmatrix(const Matrix mat, const int start, const int stop) {
     assert(start < stop);
     assert(0 <= start && start < mat.height);
-    assert(0 <= stop && stop < mat.height);
+    assert(0 < stop && stop <= mat.height);
 
     Matrix submat;
     submat.width = mat.width;
@@ -113,6 +119,7 @@ void getIndexOfTwoSmallestInColumn(const Matrix mat, int col, int& idx1, int& id
 }
 
 void test() {
+    int n = 5, k = 4;
     Matrix descriptors = AllocateMatrix(n, k, 1);
     printMatrix(descriptors);
     for (int i = 0; i < descriptors.width; ++i) {
@@ -127,16 +134,95 @@ void test() {
 }
 
 
+/*
+ *Pre-conditions:
+ *    `distanceSubmat` is a n_i x n matrix
+ *    `correspondenceMat` is a 1 x n matrix
+ *Post-conditions:
+ *    See `computeCorrespondenceMat`
+ */
+void computeCorrespondenceVec(const Matrix distanceSubmat,
+        Matrix correspondenceMat, float matchConfidence) {
+    assert(correspondenceMat.height == 1);
+    assert(correspondenceMat.width == distanceSubmat.width);
+
+    int n = distanceSubmat.width;
+    for (int i = 0; i < n; ++i) {
+        int idx1, idx2;
+        getIndexOfTwoSmallestInColumn(distanceSubmat, i, idx1, idx2);
+        float dist1 = distanceSubmat.elements[idx1 * distanceSubmat.width + i];
+        float dist2 = distanceSubmat.elements[idx2 * distanceSubmat.width + i];
+
+        if (dist1 / dist2 < 1 - matchConfidence) {
+            correspondenceMat.elements[i] = idx1;
+        }
+        else {
+            correspondenceMat.elements[i] = -1;
+        }
+    }
+}
+
+
+/*
+ *Pre-conditions:
+ *    `distanceMat` is a n x n matrix
+ *    `distanceMat` is the result of computeDistanceMat()
+ *    cumNumDescriptors is an array of length `numImages`
+ *    cumNumDescriptors[numImages-1] = distanceMat.height
+ *    correspondenceMat is a numImages * n matrix
+ *
+ *    Let start = cumNumDescriptors[i-1], stop = cumNumDescriptors[i].
+ *    Then distanceMat[start:stop][:] refers to descriptors of image i.
+ *Post-conditions:
+ *    correspondenceMat[j][i] is the i-th feature's corresponding feature in
+ *    image j. It is -1 if there's no correspondence.
+ *    -1 <= correspondenceMat[j][i] < n_j, where n_j is the number of features
+ *    in image j.
+ */
+void computeCorrespondenceMat(const Matrix distanceMat, int* cumNumDescriptors,
+        int numImages, Matrix correspondenceMat, float matchConfidence) {
+    assert(distanceMat.height == distanceMat.width);
+    assert(correspondenceMat.height == numImages);
+    assert(correspondenceMat.width == distanceMat.width);
+    assert(cumNumDescriptors[numImages-1] == distanceMat.height);
+
+    for (int imgIdx = 0; imgIdx < numImages; ++imgIdx) {
+        int start = imgIdx > 0 ? cumNumDescriptors[imgIdx-1] : 0;
+        int stop = cumNumDescriptors[imgIdx];
+        Matrix src = getSubmatrix(distanceMat, start, stop);
+        Matrix dst = getSubmatrix(correspondenceMat, imgIdx, imgIdx + 1);
+
+        computeCorrespondenceVec(src, dst, matchConfidence);
+    }
+}
+
+std::vector<std::set<match> > computeCorrespondence(const Matrix& allDescriptors,
+        int* numDescriptors, int numImages) {
+    std::vector<std::set<match> > correspondenceSets;
+
+    return correspondenceSets;
+}
+
 int main(void) {
 
-    int n = 4;  // sum of all feature counts
+    const int numImages = 3;
+    int cumNumDescriptors[] = {2, 5, 9};
     int k = 4;  // size of one descriptor
+    int n = cumNumDescriptors[numImages - 1];  // sum of all feature counts
+    float matchConf = 0.1;
 
     Matrix descriptors = AllocateMatrix(n, k, 1);
     Matrix distanceMat = AllocateMatrix(n, n, 0);
+    Matrix corrMat = AllocateMatrix(numImages, n, 0);
+
 
     cpuComputeDistanceMat(descriptors, distanceMat);
+    computeCorrespondenceMat(distanceMat, cumNumDescriptors, numImages,
+            corrMat, matchConf);
+    std::cout << "distanceMat:\n";
     printMatrix(distanceMat);
+    std::cout << "corrMat:\n";
+    printMatrix(corrMat);
 
     FreeMatrix(&descriptors);
     FreeMatrix(&distanceMat);
