@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+
 #IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 #set(OpenCV_DIR "/usr/local/Cellar/opencv3/3.0.0/share/OpenCV")
 
@@ -6,6 +7,7 @@ MESSAGE( STATUS "Apple ?             " ${APPLE} )
 MESSAGE( STATUS "Unix ?              " ${UNIX} )
 MESSAGE( STATUS "CMAKE_SYSTEM_NAME   " ${CMAKE_SYSTEM_NAME})
 
+# Source: http://www.openguru.com/2009/04/cmake-detecting-platformoperating.html
 # Darwin corresponds to Mac OS X
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(OpenCV_DIR "/usr/local/Cellar/opencv3/3.0.0/share/OpenCV")
