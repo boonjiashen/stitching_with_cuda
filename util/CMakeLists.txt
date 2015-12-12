@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 find_package("CUDA" REQUIRED)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11;-O3)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11;-O3)
 
 Include(ParallelUtils.cmake)
 enable_cuda_support()
-cuda_add_executable(convolution.out 2Dconvolution.cu 2Dconvolution.h CudaTimer.cuh)
+#cuda_add_executable(convolution.out 2Dconvolution.cu 2Dconvolution.h CudaTimer.cuh)
+cuda_add_executable(testMatrix testMatrix.cu Matrix.h Matrix.cu CudaTimer.cuh)
