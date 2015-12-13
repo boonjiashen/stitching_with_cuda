@@ -1,6 +1,5 @@
 #include <iostream>
-#include <opencv2/opencv.hpp>
-#include "Matrix.h"
+#include <cstdio>
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool
