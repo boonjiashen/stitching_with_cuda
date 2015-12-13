@@ -62,7 +62,6 @@ template<typename T> void FreeDeviceMatrix(Matrix<T>* M);
 template<typename T> void FreeMatrix(Matrix<T>* M);
 
 void printMatrix(const Matrix<float> M);
-template <typename T> void func();
 
 
 void printMatrix(const Matrix<float> M) {
@@ -114,11 +113,6 @@ Matrix<T> AllocateMatrix(int height, int width, int init)
     return M;
 }	
 
-template <typename T>
-void func() {
-    int a = 0;
-    cout << "in func\n";
-}
 
 // Copy a host matrix to a device matrix.
 template<typename T>

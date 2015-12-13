@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Matrix.h"
+#include "../Matrix.h"
 
 int main(void) {
     std::cout << "Hello!\n";
