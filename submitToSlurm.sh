@@ -9,5 +9,5 @@
 #SBATCH -o out%j
 
 cd $SLURM_SUBMIT_DIR
-#./cudaFeatureMatcher
-./testUnifiedMemory
+./cudaFeatureMatcher
+#./testUnifiedMemory
