@@ -45,7 +45,7 @@ float computeL2Distance(float* descriptor1, float* descriptor2, int length) {
  *    distanceMat[j][i] is the Euclidean distance from descriptors[j][:]
  *    to descriptors[i][:]. Note that Euclidean distance is symmetric.
  */
-void cpuComputeDistanceMat(const Matrix descriptors, Matrix distanceMat) {
+void cpuComputeDistanceMat(const Matrix<float> descriptors, Matrix<float> distanceMat) {
     assert(descriptors.height == distanceMat.height);
     assert(distanceMat.height == distanceMat.width);
 
@@ -71,12 +71,13 @@ void cpuComputeDistanceMat(const Matrix descriptors, Matrix distanceMat) {
  *    Returns submat, which is a view of mat[start:stop][:]
  *    submat contains rows start, start+1, ..., stop-1 of mat
  */
-Matrix getSubmatrix(const Matrix mat, const int start, const int stop) {
+template<typename T>
+Matrix<T> getSubmatrix(const Matrix<T> mat, const int start, const int stop) {
     assert(start < stop);
     assert(0 <= start && start < mat.height);
     assert(0 < stop && stop <= mat.height);
 
-    Matrix submat;
+    Matrix<T> submat;
     submat.width = mat.width;
     submat.height = stop - start;
     submat.elements = mat.elements + start * submat.width;
@@ -92,7 +93,8 @@ Matrix getSubmatrix(const Matrix mat, const int start, const int stop) {
  *    mat[idx1][col] and mat[idx2][col] are the smallest and second smallest
  *    elements in mat[:][col]
  */
-void getIndexOfTwoSmallestInColumn(const Matrix mat, int col, int& idx1, int& idx2) {
+template<typename T>
+void getIndexOfTwoSmallestInColumn(const Matrix<T> mat, int col, int& idx1, int& idx2) {
     assert(mat.height >= 2);
     assert(0 <= col && col < mat.width);
 
@@ -118,22 +120,6 @@ void getIndexOfTwoSmallestInColumn(const Matrix mat, int col, int& idx1, int& id
     }
 }
 
-void test() {
-    int n = 5, k = 4;
-    Matrix descriptors = AllocateMatrix(n, k, 1);
-    printMatrix(descriptors);
-    for (int i = 0; i < descriptors.width; ++i) {
-        int idx1, idx2;
-        getIndexOfTwoSmallestInColumn(descriptors, i, idx1, idx2);
-        printf("for col %i, indices are %i, %i, vals are %f %f\n",
-                i, idx1, idx2, descriptors.elements[idx1 * descriptors.width + i],
-                descriptors.elements[idx2 * descriptors.width + i]
-              );
-    }
-    FreeMatrix(&descriptors);
-}
-
-
 /*
  *Pre-conditions:
  *    `distanceSubmat` is a n_i x n matrix
@@ -141,8 +127,8 @@ void test() {
  *Post-conditions:
  *    See `computeCorrespondenceMat`
  */
-void computeCorrespondenceVec(const Matrix distanceSubmat,
-        Matrix correspondenceMat, float matchConfidence) {
+void computeCorrespondenceVec(const Matrix<float> distanceSubmat,
+        Matrix<int> correspondenceMat, float matchConfidence) {
     assert(correspondenceMat.height == 1);
     assert(correspondenceMat.width == distanceSubmat.width);
 
@@ -179,8 +165,9 @@ void computeCorrespondenceVec(const Matrix distanceSubmat,
  *    -1 <= correspondenceMat[j][i] < n_j, where n_j is the number of features
  *    in image j.
  */
-void computeCorrespondenceMat(const Matrix distanceMat, int* cumNumDescriptors,
-        int numImages, Matrix correspondenceMat, float matchConfidence) {
+void computeCorrespondenceMat(const Matrix<float> distanceMat,
+        int* cumNumDescriptors,
+        int numImages, Matrix<int> correspondenceMat, float matchConfidence) {
     assert(distanceMat.height == distanceMat.width);
     assert(correspondenceMat.height == numImages);
     assert(correspondenceMat.width == distanceMat.width);
@@ -189,8 +176,8 @@ void computeCorrespondenceMat(const Matrix distanceMat, int* cumNumDescriptors,
     for (int imgIdx = 0; imgIdx < numImages; ++imgIdx) {
         int start = imgIdx > 0 ? cumNumDescriptors[imgIdx-1] : 0;
         int stop = cumNumDescriptors[imgIdx];
-        Matrix src = getSubmatrix(distanceMat, start, stop);
-        Matrix dst = getSubmatrix(correspondenceMat, imgIdx, imgIdx + 1);
+        Matrix<float> src = getSubmatrix(distanceMat, start, stop);
+        Matrix<int> dst = getSubmatrix(correspondenceMat, imgIdx, imgIdx + 1);
 
         computeCorrespondenceVec(src, dst, matchConfidence);
     }
@@ -222,7 +209,7 @@ void cumsum(T* src, T* dst, int length) {
  *    Prints the feature correspondence between each image pair, based on
  *    OpenCV's Best2NearestMatcher
  */
-void printCorrespondence(const Matrix& allDescriptors,
+void printCorrespondence(const Matrix<float>& allDescriptors,
         int* numDescriptors, int numImages, float matchConf) {
     std::vector<std::set<match> > correspondenceSets;
 
@@ -232,11 +219,11 @@ void printCorrespondence(const Matrix& allDescriptors,
 
     // Compute distance matrix
     int n = allDescriptors.height;
-    Matrix distanceMat = AllocateMatrix(n, n, 0);
+    Matrix<float> distanceMat = AllocateMatrix<float>(n, n, 0);
     cpuComputeDistanceMat(allDescriptors, distanceMat);
 
     // Compute correspondence matrix
-    Matrix corrMat = AllocateMatrix(numImages, n, 0);
+    Matrix<int> corrMat = AllocateMatrix<int>(numImages, n, 0);
     computeCorrespondenceMat(distanceMat, cumNumDesc, numImages,
             corrMat, matchConf);
 
@@ -250,13 +237,13 @@ void printCorrespondence(const Matrix& allDescriptors,
             int numDescriptors1 = numDescriptors[imgIdx1];
             int numDescriptors2 = numDescriptors[imgIdx2];
 
-            float* src = NULL;
+            int* src = NULL;
 
             // Correspondence from imgIdx2 to imgIdx1
             src = corrMat.elements + imgIdx1 * n + cumNumDesc[imgIdx2-1];
             for (int i = 0; i < numDescriptors2; ++i) {
                 if (src[i] > -0.5) {
-                    printf("im%i-%i corr %.0f-%i\n", imgIdx1, imgIdx2, src[i], i);
+                    printf("im%i-%i corr %i-%i\n", imgIdx1, imgIdx2, src[i], i);
                 }
             }
 
@@ -265,7 +252,7 @@ void printCorrespondence(const Matrix& allDescriptors,
                     (imgIdx1 > 0 ? cumNumDesc[imgIdx1-1] : 0);
             for (int i = 0; i < numDescriptors1; ++i) {
                 if (src[i] > -0.5) {
-                    printf("im%i-%i corr %i-%.0f\n", imgIdx1, imgIdx2, i, src[i]);
+                    printf("im%i-%i corr %i-%i\n", imgIdx1, imgIdx2, i, src[i]);
                 }
             }
 
@@ -283,7 +270,7 @@ int main(void) {
     int n = 9;  // sum of all feature counts
     float matchConf = 0.1;
 
-    Matrix descriptors = AllocateMatrix(n, k, 1);
+    Matrix<float> descriptors = AllocateMatrix<float>(n, k, 1);
 
     printCorrespondence(descriptors, numDescriptors, numImages, matchConf);
 

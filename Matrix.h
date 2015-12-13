@@ -61,18 +61,33 @@ template<typename T> void CopyFromDeviceMatrix(Matrix<T> Mhost, const Matrix<T> 
 template<typename T> void FreeDeviceMatrix(Matrix<T>* M);
 template<typename T> void FreeMatrix(Matrix<T>* M);
 
-void printMatrix(const Matrix<float> M);
+template<typename T> void printMatrix(const Matrix<T> M, char* fmt);
+void printMatrix(const Matrix<float>);
+void printMatrix(const Matrix<int>);
 
 
-void printMatrix(const Matrix<float> M) {
+template<typename T>
+void printMatrix(const Matrix<T> M, char* fmt) {
     int numel = M.height * M.width;
     for (int i = 0; i < numel; ++i) {
-        printf("%5.2f ", M.elements[i]);
+        printf(fmt, M.elements[i]);
         if ((i+1)%M.width == 0) {
             printf("\n");
         }
     }
 }
+
+
+void printMatrix(const Matrix<float> M) {
+    char fmt[] = "%5.2f";
+    printMatrix<float>(M, fmt);
+}
+
+void printMatrix(const Matrix<int> M) {
+    char fmt[] = "%2i";
+    printMatrix<int>(M, fmt);
+}
+
 
 // Allocate a device matrix of same size as M.
 template<typename T>
