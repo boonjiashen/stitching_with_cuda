@@ -1,0 +1,6 @@
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_35;-code=sm_35,compute_35;-m=32)
+Include(../ParallelUtils.cmake)
+enable_cuda_support()
+cuda_add_executable(testUnifiedMemory testUnifiedMemory.cu)
+target_link_libraries( testUnifiedMemory ${OpenCV_LIBS} )
