@@ -33,8 +33,16 @@
 * source code with only those rights set forth herein.
 */
 
-#ifndef _MATRIXMUL_H_
-#define _MATRIXMUL_H_
+// includes, system
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <fstream>
+// includes, project
+#include <iostream>
+
+using namespace std;
 
 // Matrix Structure declaration
 template <typename T>
@@ -46,6 +54,7 @@ struct Matrix {
 };
 
 template<typename T> Matrix<T> AllocateDeviceMatrix(const Matrix<T> M);
+
 template<typename T> Matrix<T> AllocateMatrix(int height, int width, int init);
 template<typename T> void CopyToDeviceMatrix(Matrix<T> Mdevice, const Matrix<T> Mhost);
 template<typename T> void CopyFromDeviceMatrix(Matrix<T> Mhost, const Matrix<T> Mdevice);
@@ -53,7 +62,97 @@ template<typename T> void FreeDeviceMatrix(Matrix<T>* M);
 template<typename T> void FreeMatrix(Matrix<T>* M);
 
 void printMatrix(const Matrix<float> M);
+template <typename T> void func();
 
 
-#endif // _MATRIXMUL_H_
+void printMatrix(const Matrix<float> M) {
+    int numel = M.height * M.width;
+    for (int i = 0; i < numel; ++i) {
+        printf("%5.2f ", M.elements[i]);
+        if ((i+1)%M.width == 0) {
+            printf("\n");
+        }
+    }
+}
 
+// Allocate a device matrix of same size as M.
+template<typename T>
+Matrix<T> AllocateDeviceMatrix(const Matrix<T> M)
+{
+    Matrix<T> Mdevice = M;
+    int size = M.width * M.height * sizeof(T);
+    cudaMalloc((void**)&Mdevice.elements, size);
+    return Mdevice;
+}
+
+// Allocate a device matrix of dimensions height*width
+//	If init == 0, initialize to all zeroes.  
+//	If init == 1, perform random initialization.
+//  If init == 2, initialize matrix parameters, but do not allocate memory 
+template<typename T>
+Matrix<T> AllocateMatrix(int height, int width, int init)
+{
+    Matrix<T> M;
+    M.width = M.pitch = width;
+    M.height = height;
+    int size = M.width * M.height;
+    M.elements = NULL;
+    
+    // don't allocate memory on option 2
+    if(init == 2)
+		return M;
+		
+	M.elements = (T*) malloc(size*sizeof(T));
+
+	for(unsigned int i = 0; i < M.height * M.width; i++)
+	{
+        //TODO Is this correct? typecasting RANDMAX
+		M.elements[i] = (init == 0) ? (0.0f) : (rand() / (T)RAND_MAX);
+		if(rand() % 2)
+			M.elements[i] = - M.elements[i];
+	}
+    return M;
+}	
+
+template <typename T>
+void func() {
+    int a = 0;
+    cout << "in func\n";
+}
+
+// Copy a host matrix to a device matrix.
+template<typename T>
+void CopyToDeviceMatrix(Matrix<T> Mdevice, const Matrix<T> Mhost)
+{
+    int size = Mhost.width * Mhost.height * sizeof(T);
+    Mdevice.height = Mhost.height;
+    Mdevice.width = Mhost.width;
+    Mdevice.pitch = Mhost.pitch;
+    cudaMemcpy(Mdevice.elements, Mhost.elements, size, 
+					cudaMemcpyHostToDevice);
+}
+
+// Copy a device matrix to a host matrix.
+template<typename T>
+void CopyFromDeviceMatrix(Matrix<T> Mhost, const Matrix<T> Mdevice)
+{
+    int size = Mdevice.width * Mdevice.height * sizeof(T);
+    cudaMemcpy(Mhost.elements, Mdevice.elements, size, 
+					cudaMemcpyDeviceToHost);
+}
+
+// Free a device matrix.
+template<typename T>
+void FreeDeviceMatrix(Matrix<T>* M)
+{
+    cudaFree(M->elements);
+    M->elements = NULL;
+}
+
+// Free a host Matrix
+template<typename T>
+void FreeMatrix(Matrix<T>* M)
+{
+    free(M->elements);
+    M->elements = NULL;
+}
