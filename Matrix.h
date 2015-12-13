@@ -36,38 +36,23 @@
 #ifndef _MATRIXMUL_H_
 #define _MATRIXMUL_H_
 
-// Thread block size
-#define KERNEL_SIZE 5
-#define RADIUS      2
-#define BLOCK_SIZE 16
-
 // Matrix Structure declaration
-typedef struct {
+template <typename T>
+struct Matrix {
     unsigned int width;
     unsigned int height;
     unsigned int pitch;
-    float* elements;
-} Matrix;
+    T* elements;
+};
 
-__global__ void ConvolutionKernel(Matrix M, Matrix N, Matrix P);
+template<typename T> Matrix<T> AllocateDeviceMatrix(const Matrix<T> M);
+template<typename T> Matrix<T> AllocateMatrix(int height, int width, int init);
+template<typename T> void CopyToDeviceMatrix(Matrix<T> Mdevice, const Matrix<T> Mhost);
+template<typename T> void CopyFromDeviceMatrix(Matrix<T> Mhost, const Matrix<T> Mdevice);
+template<typename T> void FreeDeviceMatrix(Matrix<T>* M);
+template<typename T> void FreeMatrix(Matrix<T>* M);
 
-Matrix AllocateDeviceMatrix(const Matrix M);
-Matrix AllocateMatrix(int height, int width, int init);
-void CopyToDeviceMatrix(Matrix Mdevice, const Matrix Mhost);
-void CopyFromDeviceMatrix(Matrix Mhost, const Matrix Mdevice);
-bool CompareResults(float* A, float* B, int elements, float eps);
-bool ReadParams(int* params, int size, char* file_name);
-int ReadFile(Matrix* M, char* file_name);
-void WriteFile(Matrix M, char* file_name);
-void FreeDeviceMatrix(Matrix* M);
-void FreeMatrix(Matrix* M);
-
-Matrix PadMatrix(const Matrix& M, const int deltaHeight, const int deltaWidth);
-void ExtractFromPadded(Matrix M, const Matrix& Mpadded);
-
-void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P);
-
-void printMatrix(const Matrix M);
+void printMatrix(const Matrix<float> M);
 
 
 #endif // _MATRIXMUL_H_
