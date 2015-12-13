@@ -478,6 +478,12 @@ int main(int argc, char* argv[])
 
         (*finder)(img, features[i]);
         features[i].img_idx = i;
+
+        int numFeats = 20;
+        features[i].descriptors = features[i].descriptors.rowRange(0, numFeats);
+        features[i].keypoints = vector<KeyPoint>(
+                features[i].keypoints.begin(), features[i].keypoints.begin() + numFeats);
+
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
         resize(full_img, img, Size(), seam_scale, seam_scale);
@@ -520,8 +526,6 @@ int main(int argc, char* argv[])
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
 
-    //displayPairwiseMatches(pairwise_matches, images, features);
-
     // Get all descriptors in a Nxk matrix
     Mat allDescriptors = features[0].descriptors.getMat(ACCESS_RW);
     for (int i = 1; i < features.size(); ++i) {
@@ -560,6 +564,7 @@ int main(int argc, char* argv[])
         cout << feature.descriptors.size() << endl;
     }
     for (auto& pairwise_match : pairwise_matches) {
+        int src_im = pairwise_match.src_img_idx, dst_im = pairwise_match.dst_img_idx;
         printf("src_img_idx=%i, dst_img_idx=%i, no. matches=%i, no. inliers=%i, inliers_mask size=%i\n",
                 pairwise_match.src_img_idx,
                 pairwise_match.dst_img_idx,
@@ -568,7 +573,12 @@ int main(int argc, char* argv[])
                 pairwise_match.inliers_mask.size());
         int i = 0;
         for (auto& match : pairwise_match.matches) {
-            printf("\tqueryIdx=%i, trainIdx=%i\n", match.queryIdx, match.trainIdx);
+            int query = match.queryIdx, train = match.trainIdx;
+            Point2f queryPt = features[src_im].keypoints[query].pt;
+            Point2f trainPt = features[dst_im].keypoints[train].pt;
+            printf("\tqueryIdx=%i, trainIdx=%i, ", query, train);
+            printf("query=(%.0f,%.0f) | train=(%.0f,%.0f)\n",
+                    queryPt.x, queryPt.y, trainPt.x, trainPt.y);
             if (++i >= 5) break;
         }
         cout << "\tmask = ";
@@ -577,6 +587,8 @@ int main(int argc, char* argv[])
         }
         cout << endl;
     }
+
+    displayPairwiseMatches(pairwise_matches, images, features);
 
     return 0;
 }
