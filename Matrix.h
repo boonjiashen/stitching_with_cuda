@@ -83,6 +83,14 @@ void printMatrix(const Matrix<float> M) {
     printMatrix<float>(M, fmt);
 }
 
+void printMatrixD(const Matrix<float> matrixD) {
+    Matrix<float> matrixH = AllocateMatrix<float>
+        (matrixD.height, matrixD.width, 0);
+    CopyFromDeviceMatrix(matrixH, matrixD);
+    printMatrix(matrixH);
+    FreeMatrix(&matrixH);
+}
+
 void printMatrix(const Matrix<int> M) {
     char fmt[] = "%2i";
     printMatrix<int>(M, fmt);

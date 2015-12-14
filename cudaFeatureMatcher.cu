@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 
+#define BLOCK_SIZE 1024
 
 typedef std::pair<int, int> match;
 
@@ -60,6 +61,81 @@ void cpuComputeDistanceMat(const Matrix<float> descriptors, Matrix<float> distan
             *dst = computeL2Distance(descriptor1, descriptor2, k);
         }
     }
+}
+
+/*
+ *Each thread is in charge of computing one element in distanceMat
+ */
+__global__ void kernelDistanceMat(const Matrix<float> descriptors, Matrix<float> distanceMat) {
+    int matX = blockDim.x * blockIdx.x + threadIdx.x;
+    int matY = blockIdx.y;
+    int n = descriptors.height;
+    int k = descriptors.width;
+
+    if (matX >= n) { return; }
+    float ssd = 0;  // sum of squared distances
+    for (int i = 0; i < k; ++i) {
+        float dist = descriptors.elements[matY * k + i] -
+            descriptors.elements[matX * k + i];
+        ssd += dist * dist;
+    }
+    distanceMat.elements[matY * n + matX] = sqrtf(ssd);
+}
+
+/*
+ *See CPU-equivalent.
+ *Pre-conditions:
+ *    `descriptors` and `distanceMat` are in GPU memory
+ */
+void gpuComputeDistanceMat(const Matrix<float> descriptors, Matrix<float> distanceMat) {
+    assert(descriptors.height == distanceMat.height);
+    assert(distanceMat.height == distanceMat.width);
+
+    int n = descriptors.height;
+
+    dim3 dimGrid((n + BLOCK_SIZE - 1)/BLOCK_SIZE, n);
+    dim3 dimBlock(BLOCK_SIZE);
+    kernelDistanceMat<<<dimGrid,dimBlock>>>(descriptors, distanceMat);
+
+}
+
+/*
+ *Pre-conditions:
+ *    `A` and `B` are of the same size and are on host memory.
+ *Post-conditions:
+ *    Returns the root mean squared error between A and B
+ *    if number of elements is more than 0, else returns 0
+ */
+float getRMSE(const Matrix<float> A, const Matrix<float> B) {
+    assert(A.height == B.height);
+    assert(A.width == B.width);
+
+    int numel = A.height * A.width;  // number of elements
+    if (numel == 0) { return 0; }
+
+    float sse = 0;  // sum of squared error
+    for (int i = 0; i < numel; ++i) {
+        sse = pow(A.elements[i] - B.elements[i], 2);
+    }
+
+    return sqrt(sse / numel);
+}
+
+/*
+ *See getRMSE()
+ *Pre-conditions:
+ *    A is in host memory and BDevice is in device memory.
+ */
+float getRMSEHostAndDevice(const Matrix<float> A, const Matrix<float> BDevice) {
+    assert(A.height == BDevice.height);
+    assert(A.width == BDevice.width);
+
+    Matrix<float> BHost = AllocateMatrix<float>(BDevice.height, BDevice.width, 0);
+    CopyFromDeviceMatrix(BHost, BDevice);
+    float rmse = getRMSE(A, BHost);
+    FreeMatrix(&BHost);
+
+    return rmse;
 }
 
 /*
@@ -270,9 +346,35 @@ int main(void) {
     int n = 9;  // sum of all feature counts
     float matchConf = 0.1;
 
-    Matrix<float> descriptors = AllocateMatrix<float>(n, k, 1);
+    Matrix<float> descriptorsH = AllocateMatrix<float>(n, k, 1);
 
-    printCorrespondence(descriptors, numDescriptors, numImages, matchConf);
+    // Initialize descriptors in device
+    Matrix<float> descriptorsD = AllocateDeviceMatrix<float>(descriptorsH);
+    CopyToDeviceMatrix(descriptorsD, descriptorsH);
+
+    // Compute distance matrix in device
+    Matrix<float> distanceMatD = AllocateDeviceMatrix<float>(AllocateMatrix<float>(n, n, 2));
+    gpuComputeDistanceMat(descriptorsD, distanceMatD);
+
+    // Compute distance matrix in host
+    Matrix<float> distanceMatH = AllocateMatrix<float>(n, n, 0);
+    cpuComputeDistanceMat(descriptorsH, distanceMatH);
+
+    printf("Host descriptor mat:\n");
+    printMatrix(descriptorsH);
+    printf("Device descriptor mat:\n");
+    printMatrixD(descriptorsD);
+    printf("Error between descriptor in D and H = %f\n",
+            getRMSEHostAndDevice(descriptorsH, descriptorsD));
+
+    printf("Host distance mat:\n");
+    printMatrix(distanceMatH);
+    printf("Device distance mat:\n");
+    printMatrixD(distanceMatD);
+    printf("Error between distance mat in D and H = %f\n",
+            getRMSEHostAndDevice(distanceMatH, distanceMatD));
+
+    /*printCorrespondence(descriptorsH, numDescriptors, numImages, matchConf);*/
 
     /*cpuComputeDistanceMat(descriptors, distanceMat);*/
     /*computeCorrespondenceMat(distanceMat, cumNumDescriptors, numImages,*/
@@ -280,7 +382,10 @@ int main(void) {
     /*std::cout << "corrMat:\n";*/
     /*printMatrix(corrMat);*/
 
-    FreeMatrix(&descriptors);
+    FreeMatrix(&descriptorsH);
+    FreeMatrix(&distanceMatH);
+    FreeDeviceMatrix(&descriptorsD);
+    FreeDeviceMatrix(&distanceMatD);
 
     /*cv::Mat image = cv::imread( "outputImages/result.jpg", 1 );*/
     /*printf("size = (%i, %i)\n", image.rows, image.cols);*/

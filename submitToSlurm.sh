@@ -9,5 +9,5 @@
 #SBATCH -o %j.stdout
 
 cd $SLURM_SUBMIT_DIR
-./cudaFeatureMatcher
+cuda-memcheck ./cudaFeatureMatcher
 #./testUnifiedMemory
