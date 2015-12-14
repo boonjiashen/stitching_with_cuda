@@ -93,7 +93,8 @@ void gpuComputeDistanceMat(const Matrix<float> descriptors, Matrix<float> distan
  *    Returns the root mean squared error between A and B
  *    if number of elements is more than 0, else returns 0
  */
-float getRMSE(const Matrix<float> A, const Matrix<float> B) {
+template <typename T>
+float getRMSE(const Matrix<T> A, const Matrix<T> B) {
     assert(A.height == B.height);
     assert(A.width == B.width);
 
@@ -113,12 +114,13 @@ float getRMSE(const Matrix<float> A, const Matrix<float> B) {
  *Pre-conditions:
  *    A is in host memory and BDevice is in device memory.
  */
-float getRMSEHostAndDevice(const Matrix<float> A, const Matrix<float> BDevice) {
+template <typename T>
+float getRMSEHostAndDevice(const Matrix<T> A, const Matrix<T> BDevice) {
     assert(A.height == BDevice.height);
     assert(A.width == BDevice.width);
 
-    Matrix<float> BHost = AllocateMatrix<float>(BDevice.height, BDevice.width, 0);
-    CopyFromDeviceMatrix(BHost, BDevice);
+    Matrix<T> BHost = AllocateMatrix<T>(BDevice.height, BDevice.width, 0);
+    CopyFromDeviceMatrix<T>(BHost, BDevice);
     float rmse = getRMSE(A, BHost);
     FreeMatrix(&BHost);
 
@@ -396,9 +398,10 @@ int main(void) {
 
     const int numImages = 3;
     int numDescriptors[] = {2, 3, 4};
+    int cumNumDescriptors[] = {2, 5, 9};
     int k = 32;  // size of one descriptor
-    int n = 1000;  // sum of all feature counts
-    /*float matchConf = 0.1;*/
+    int n = 9;  // sum of all feature counts
+    float matchConf = 0.1;
 
     printf("n=%i, k=%i\n", n, k);
 
@@ -421,6 +424,24 @@ int main(void) {
 
     cpuComputeDistanceMat(descriptorsH, distanceMatH);
     cout << "Computed distance mat with CPU\n";
+
+    // Compute correspondence matrix in host
+    Matrix<int> correspondenceMatH = AllocateMatrix<int>(numImages, n, 0);
+    computeCorrespondenceMat(distanceMatH, cumNumDescriptors, numImages,
+            correspondenceMatH, matchConf);
+
+    // Compute correspondence matrix in device
+    Matrix<int> correspondenceMatD =
+        AllocateDeviceMatrix<int>(correspondenceMatH);
+    gpuComputeCorrespondenceMat(distanceMatD, cumNumDescriptors, numImages,
+            correspondenceMatD, matchConf);
+
+    printf("Host correspondence mat:\n");
+    printMatrix(correspondenceMatH);
+    printf("Device correspondence mat:\n");
+    printMatrixD(correspondenceMatD);
+    printf("Error between correspondence mat in D and H = %f\n",
+            getRMSEHostAndDevice(correspondenceMatH, correspondenceMatD));
 
     /*printf("Host descriptor mat:\n");*/
     /*printMatrix(descriptorsH);*/
@@ -446,8 +467,10 @@ int main(void) {
 
     FreeMatrix(&descriptorsH);
     FreeMatrix(&distanceMatH);
+    FreeMatrix(&correspondenceMatH);
     FreeDeviceMatrix(&descriptorsD);
     FreeDeviceMatrix(&distanceMatD);
+    FreeDeviceMatrix(&correspondenceMatD);
 
     /*cv::Mat image = cv::imread( "outputImages/result.jpg", 1 );*/
     /*printf("size = (%i, %i)\n", image.rows, image.cols);*/

@@ -100,8 +100,9 @@ void printMatrix(const Matrix<float> M) {
     printMatrix<float>(M, fmt);
 }
 
-void printMatrixD(const Matrix<float> matrixD) {
-    Matrix<float> matrixH = AllocateMatrix<float>
+template<typename T>
+void printMatrixD(const Matrix<T> matrixD) {
+    Matrix<T> matrixH = AllocateMatrix<T>
         (matrixD.height, matrixD.width, 0);
     CopyFromDeviceMatrix(matrixH, matrixD);
     printMatrix(matrixH);
