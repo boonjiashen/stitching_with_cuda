@@ -5,7 +5,7 @@
 #include <vector>
 #include <set>
 
-#define BLOCK_SIZE 2
+#define BLOCK_SIZE 1024
 
 typedef std::pair<int, int> match;
 
@@ -396,14 +396,21 @@ void printCorrespondence(const Matrix<float>& allDescriptors,
 
 int main(void) {
 
-    const int numImages = 3;
-    int numDescriptors[] = {2, 3, 4};
-    int cumNumDescriptors[] = {2, 5, 9};
+    int numDescriptors[] = {1000, 2000, 3000, 4000, 5000};
+    const int numImages = sizeof(numDescriptors) / sizeof(numDescriptors[0]);
     int k = 32;  // size of one descriptor
-    int n = 9;  // sum of all feature counts
     float matchConf = 0.1;
 
-    printf("n=%i, k=%i\n", n, k);
+    // Compute cumulative sum as input downstream
+    int cumNumDescriptors[numImages];
+    cumsum(numDescriptors, cumNumDescriptors, numImages);
+    int n = cumNumDescriptors[numImages-1];  // sum of all feature counts
+
+    cout << "Num descriptors:\n\t";
+    for (int i=0;i<numImages;++i) { cout << numDescriptors[i] << " "; }
+    cout << endl;
+
+    printf("n=%i, k=%i, numImages=%i\n", n, k, numImages);
 
     Matrix<float> descriptorsH = AllocateMatrix<float>(n, k, 1);
 
@@ -436,10 +443,10 @@ int main(void) {
     gpuComputeCorrespondenceMat(distanceMatD, cumNumDescriptors, numImages,
             correspondenceMatD, matchConf);
 
-    printf("Host correspondence mat:\n");
-    printMatrix(correspondenceMatH);
-    printf("Device correspondence mat:\n");
-    printMatrixD(correspondenceMatD);
+    /*printf("Host correspondence mat:\n");*/
+    /*printMatrix(correspondenceMatH);*/
+    /*printf("Device correspondence mat:\n");*/
+    /*printMatrixD(correspondenceMatD);*/
     printf("Error between correspondence mat in D and H = %f\n",
             getRMSEHostAndDevice(correspondenceMatH, correspondenceMatD));
 

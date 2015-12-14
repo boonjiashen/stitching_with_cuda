@@ -37,7 +37,7 @@ enable_cuda_support()
 cuda_add_executable(cudaFeatureMatcher cudaFeatureMatcher.cu Matrix.h)
 
 # Otherwise we can't use C++11 features
-#set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS "-std=c++11")
 
 #add_executable( feature_matching feature_matching.cpp )
 #target_link_libraries( feature_matching ${OpenCV_LIBS} )
