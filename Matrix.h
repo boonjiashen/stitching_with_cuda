@@ -64,6 +64,23 @@ template<typename T> void FreeMatrix(Matrix<T>* M);
 template<typename T> void printMatrix(const Matrix<T> M, char* fmt);
 void printMatrix(const Matrix<float>);
 void printMatrix(const Matrix<int>);
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool
+        abort=true);
+
+/*
+ *Source: http://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
+ */
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool
+        abort)
+{
+    if (code != cudaSuccess) 
+    {
+        fprintf(stderr,"GPUassert: %s %s %d\n",
+                cudaGetErrorString(code), file, line);
+        if (abort) exit(code);
+    }
+}
 
 
 template<typename T>
@@ -102,8 +119,12 @@ template<typename T>
 Matrix<T> AllocateDeviceMatrix(const Matrix<T> M)
 {
     Matrix<T> Mdevice = M;
-    int size = M.width * M.height * sizeof(T);
-    cudaMalloc((void**)&Mdevice.elements, size);
+
+    // Using size_t instead of int since size_t seems to have a larger range.
+    // int will clip size and cause cudaMalloc not throw an exception
+    // when number of elements should be large but isn't due to clip
+    size_t size = M.width * M.height * sizeof(T);
+    gpuErrchk( cudaMalloc((void**)&Mdevice.elements, size) );
     return Mdevice;
 }
 

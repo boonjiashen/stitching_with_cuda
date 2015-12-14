@@ -43,4 +43,4 @@ cuda_add_executable(cudaFeatureMatcher cudaFeatureMatcher.cu Matrix.h)
 #target_link_libraries( feature_matching ${OpenCV_LIBS} )
 
 #add_subdirectory(testUnifiedMemory)
-#add_subdirectory(testMatrix)
+#add_subdirectory(tryMemoryAllocationError)

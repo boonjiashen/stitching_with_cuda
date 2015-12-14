@@ -5,24 +5,9 @@
 #include <vector>
 #include <set>
 
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 2
 
 typedef std::pair<int, int> match;
-
-/*
- *Source: http://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
- */
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool
-        abort=true)
-{
-    if (code != cudaSuccess) 
-    {
-        fprintf(stderr,"GPUassert: %s %s %d\n",
-                cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
-    }
-}
 
 /*
  *Pre-conditions:
@@ -45,6 +30,8 @@ float computeL2Distance(float* descriptor1, float* descriptor2, int length) {
  *Post-conditions:
  *    distanceMat[j][i] is the Euclidean distance from descriptors[j][:]
  *    to descriptors[i][:]. Note that Euclidean distance is symmetric.
+ *Known bugs:
+ *    binary produces no stdout with n = 10000 and k = 32.
  */
 void cpuComputeDistanceMat(const Matrix<float> descriptors, Matrix<float> distanceMat) {
     assert(descriptors.height == distanceMat.height);
@@ -340,11 +327,13 @@ void printCorrespondence(const Matrix<float>& allDescriptors,
 
 int main(void) {
 
-    const int numImages = 3;
-    int numDescriptors[] = {2, 3, 4};
-    int k = 4;  // size of one descriptor
-    int n = 9;  // sum of all feature counts
-    float matchConf = 0.1;
+    /*const int numImages = 3;*/
+    /*int numDescriptors[] = {2, 3, 4};*/
+    int k = 32;  // size of one descriptor
+    int n = 1000;  // sum of all feature counts
+    /*float matchConf = 0.1;*/
+
+    printf("n=%i, k=%i\n", n, k);
 
     Matrix<float> descriptorsH = AllocateMatrix<float>(n, k, 1);
 
@@ -355,22 +344,28 @@ int main(void) {
     // Compute distance matrix in device
     Matrix<float> distanceMatD = AllocateDeviceMatrix<float>(AllocateMatrix<float>(n, n, 2));
     gpuComputeDistanceMat(descriptorsD, distanceMatD);
+    cout << "Computed distance mat with GPU\n";
 
     // Compute distance matrix in host
     Matrix<float> distanceMatH = AllocateMatrix<float>(n, n, 0);
-    cpuComputeDistanceMat(descriptorsH, distanceMatH);
+    cout << "Allocated distance matrix in host\n";
+    cout << "address of descriptorsH = " << descriptorsH.elements << endl;
+    cout << "address of distanceMatH = " << distanceMatH.elements << endl;
 
-    printf("Host descriptor mat:\n");
-    printMatrix(descriptorsH);
-    printf("Device descriptor mat:\n");
-    printMatrixD(descriptorsD);
+    cpuComputeDistanceMat(descriptorsH, distanceMatH);
+    cout << "Computed distance mat with CPU\n";
+
+    /*printf("Host descriptor mat:\n");*/
+    /*printMatrix(descriptorsH);*/
+    /*printf("Device descriptor mat:\n");*/
+    /*printMatrixD(descriptorsD);*/
     printf("Error between descriptor in D and H = %f\n",
             getRMSEHostAndDevice(descriptorsH, descriptorsD));
 
-    printf("Host distance mat:\n");
-    printMatrix(distanceMatH);
-    printf("Device distance mat:\n");
-    printMatrixD(distanceMatD);
+    /*printf("Host distance mat:\n");*/
+    /*printMatrix(distanceMatH);*/
+    /*printf("Device distance mat:\n");*/
+    /*printMatrixD(distanceMatD);*/
     printf("Error between distance mat in D and H = %f\n",
             getRMSEHostAndDevice(distanceMatH, distanceMatD));
 
