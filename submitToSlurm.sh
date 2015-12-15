@@ -9,6 +9,6 @@
 #SBATCH -o %j.stdout
 
 cd $SLURM_SUBMIT_DIR
-cuda-memcheck ./tryCPUFeatureMatcher.out
+cuda-memcheck ./tryGPUFeatureMatcher.out
 #cuda-memcheck ./gpuFeatureMatcher.out
 #./testUnifiedMemory
