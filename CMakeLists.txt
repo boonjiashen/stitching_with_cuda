@@ -34,7 +34,8 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
 Include(ParallelUtils.cmake)
 enable_cuda_support()
-cuda_add_executable(cudaFeatureMatcher cudaFeatureMatcher.cu Matrix.h)
+cuda_add_executable(gpuFeatureMatcher.out gpuFeatureMatcher.cu
+    cpuFeatureMatcher.h Matrix.h)
 
 # Otherwise we can't use C++11 features
 set(CMAKE_CXX_FLAGS "-std=c++11")
