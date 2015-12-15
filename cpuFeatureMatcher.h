@@ -130,6 +130,104 @@ void getIndexOfTwoSmallestInColumn(const Matrix<T> mat, int col, int& idx1, int&
 }
 
 /*
+ *Computes the correspondence of one feature given its distance from other
+ *features
+ *Pre-conditions:
+ *    `distances` is an array of length `len`
+ *    distances[i] is the distance of a fixed feature to feature i
+ *Post-conditions:
+ *    Returns index i, such that feature i corresponds to the fixed feature, if
+ *    there is correspondence, else returns -1
+ */
+int computeCorrespondenceScalar(float* distances, int len, float matchConfidence) {
+
+    Matrix<float> M;
+    M.height = len;
+    M.width = 1;
+    M.elements = distances;
+
+    int idx1, idx2;
+    getIndexOfTwoSmallestInColumn(M, 0, idx1, idx2);
+    float dist1 = distances[idx1];
+    float dist2 = distances[idx2];
+
+    if (dist1 / dist2 < 1 - matchConfidence) {
+        return idx1;
+    }
+    else {
+        return -1;
+    }
+}
+
+/*
+ *Computes the correspondence of descriptor[idxFrom] against descriptors 
+ *descriptor[idxToStart:idxToStop] (excludes idxToStop)
+ *Pre-conditions:
+ *    descriptors is a n x k matrx
+ *    0 <= idxFrom, idxToStart, idxToStop < n
+ *    idxToStart < idxToStop
+ *Post-conditions:
+ *    Returns i s.t. descriptor[idxFrom] corresponds to descriptor idxToStart+i,
+ *    if there is correspondence, else returns -1
+ *    0 <= i < idxToStop-idxToStart
+ */
+int computeCorrespondenceScalar(const Matrix<float> descriptors,
+        int idxFrom, int idxToStart, int idxToStop, float matchConfidence) {
+    int n = descriptors.height;
+    assert(0 <= idxFrom < n);
+    assert(0 <= idxToStart < n);
+    assert(0 <= idxToStop < n);
+
+    int n_i = idxToStop - idxToStart;
+    int k = descriptors.width;
+    float distances[n_i];
+    float* descriptorFrom = descriptors.elements + k * idxFrom;
+    for (int j = 0; j < n_i; ++j) {
+        float* descriptorTo = descriptors.elements + k * (j + idxToStart);
+        distances[j] = computeL2Distance(descriptorFrom, descriptorTo, k);
+    }
+    return computeCorrespondenceScalar(distances, n_i, matchConfidence);
+}
+
+
+/*
+ *Compute correspondence matrix given descriptors. This has better space
+ *complexity than first computing the full distance matrix
+ *Pre-conditions:
+ *    `distanceMat` is a n x k matrix
+ *    cumNumDescriptors is an array of length `numImages`
+ *    cumNumDescriptors[numImages-1] = distanceMat.height
+ *    correspondenceMat is a numImages x n matrix
+ *Post-conditions:
+ *    correspondenceMat[j][i] is the i-th feature's corresponding feature in
+ *    image j. It is -1 if there's no correspondence.
+ *    -1 <= correspondenceMat[j][i] < n_j, where n_j is the number of features
+ *    in image j.
+ */
+void computeCorrespondenceMatFromDescriptors(
+        const Matrix<float> descriptors,
+        int* cumNumDescriptors,
+        int numImages, Matrix<int> correspondenceMat, float matchConfidence) {
+    assert(correspondenceMat.height == numImages);
+    assert(correspondenceMat.width == descriptors.height);
+    assert(cumNumDescriptors[numImages-1] == descriptors.height);
+
+    int n = descriptors.height;
+
+    for (int imgIdx = 0; imgIdx < numImages; ++imgIdx) {
+        int idxToStart = imgIdx > 0 ? cumNumDescriptors[imgIdx-1] : 0;
+        int idxToStop = cumNumDescriptors[imgIdx];
+
+        for (int idxFrom = 0; idxFrom < n; ++idxFrom) {
+            int* dst = correspondenceMat.elements + imgIdx * n + idxFrom;
+            *dst = computeCorrespondenceScalar(descriptors, idxFrom,
+                    idxToStart, idxToStop, matchConfidence);
+        }
+    }
+}
+ 
+
+/*
  *Pre-conditions:
  *    `distanceSubmat` is a n_i x n matrix
  *    `correspondenceMat` is a 1 x n matrix
