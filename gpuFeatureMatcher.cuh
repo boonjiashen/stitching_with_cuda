@@ -101,7 +101,7 @@ __global__ void gpuComputeCorrespondenceVec(
 /*
  *See computeCorrespondenceMat()
  *Pre-conditions:
- *    `distanceMat` and `correspondenceMat` are in device memory
+ *    element member in `distanceMat` and `correspondenceMat` point to device memory
  *    `cumNumDescriptors` is in host memory
  */
 void gpuComputeCorrespondenceMat(const Matrix<float> distanceMat,
@@ -124,4 +124,105 @@ void gpuComputeCorrespondenceMat(const Matrix<float> distanceMat,
 
         gpuComputeCorrespondenceVec<<<dimGrid,dimBlock>>>(src, dst, matchConfidence);
     }
+}
+
+// See CPU-equivalent.
+__device__ float gpuComputeL2Distance(float* descriptor1, float* descriptor2, int length) {
+    float ssd = 0;  // sum of squared distances
+    for (int i = 0; i < length; ++i) {
+        float dist = descriptor1[i] - descriptor2[i];
+        ssd += dist * dist;
+    }
+    return sqrtf(ssd);
+}
+
+
+/*
+ *Kernel to compute correspondence directly from descriptors.
+ *A thread with thread ID tid computes the correspondence of descriptor[tid][:]
+ *to the range of descriptor[idxToStart:idxToStop][:] (excludes idxToStop).
+ *It assigns this correspondence to correspondenceVec[tid]
+ *Pre-conditions:
+ *    element member of `descriptors` and `correspondenceVec` point to device memory
+ *    `descriptors` is a n x k matrix
+ *    `correspondenceVec` is a 1 x n matrix
+ *    idxToStart < idxToStop
+ *    0 <= idxToStart, idxToStop <= n
+ *Post-conditions:
+ *    Assigns values to correspondenceVec
+ */
+__global__ void kernelComputeCorrespondence(
+        const Matrix<float> descriptors,
+        Matrix<int> correspondenceVec,
+        int idxToStart, int idxToStop, float matchConfidence) {
+
+    int n = descriptors.height;
+    int k = descriptors.width;
+    assert(correspondenceVec.height == 1);
+    assert(correspondenceVec.width == n);
+    assert(idxToStart < idxToStop);
+    assert(0 <= idxToStart && idxToStart < n);
+    assert(0 < idxToStop && idxToStop <= n);
+
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid >= n) { return; }
+
+    float dist1 = FLT_MAX, dist2 = FLT_MAX; // smallest & 2nd smallest distance
+    int idx1 = -1;  // index of match with smallest distance
+    float* descriptorFrom = descriptors.elements + tid * k;
+    for (int j = idxToStart; j < idxToStop; ++j) {
+        float* descriptorTo = descriptors.elements + j * k;
+        float currDist = gpuComputeL2Distance(descriptorFrom, descriptorTo, k);
+
+        if (currDist < dist1) {
+            dist2 = dist1;
+            dist1 = currDist;
+
+            // Decrement by idxToStart because we want correspondence to start from 0
+            // i.e. treat descriptors[idxToStart:idxToStop] as the descriptors
+            // 0 to idxToStop-idxToStart-1 of the 'from' image
+            idx1 = j - idxToStart;
+        }
+        else if (currDist < dist2) {
+            dist2 = currDist;
+        }
+    }
+
+    int correspondence = (dist1 / dist2 < 1 - matchConfidence) ? idx1 : -1;
+    correspondenceVec.elements[tid] = correspondence;
+}
+
+/*
+ *Space-optimal feature matcher. Computes correspondence matrix directly from
+ *descriptors.
+ *A kernel is launched for every row in correspondenceMat. Every thread
+ *computes one element in correspondenceMat.
+ *See CPU-equivalent.
+ *Pre-conditions:
+ *    element member of `descriptors` and `correspondenceMat` point to device memory
+ *    `cumNumDescriptors` points to host memory
+ */
+void gpuComputeCorrespondenceMatFromDescriptors(
+        const Matrix<float> descriptors,
+        int* cumNumDescriptors,
+        int numImages, Matrix<int> correspondenceMat, float matchConfidence) {
+    assert(correspondenceMat.height == numImages);
+    assert(correspondenceMat.width == descriptors.height);
+    assert(cumNumDescriptors[numImages-1] == descriptors.height);
+
+    int n = descriptors.height;
+
+    dim3 dimGrid((n + BLOCK_SIZE - 1)/BLOCK_SIZE);
+    dim3 dimBlock(BLOCK_SIZE);
+    for (int imgIdx = 0; imgIdx < numImages; ++imgIdx) {
+        int idxToStart = imgIdx > 0 ? cumNumDescriptors[imgIdx-1] : 0;
+        int idxToStop = cumNumDescriptors[imgIdx];
+
+        Matrix<int> correspondenceVec = getSubmatrix(correspondenceMat,
+                imgIdx, imgIdx+1);
+        kernelComputeCorrespondence<<<dimGrid,dimBlock>>>(
+                descriptors, correspondenceVec,
+                idxToStart, idxToStop, matchConfidence);
+    }
+
 }

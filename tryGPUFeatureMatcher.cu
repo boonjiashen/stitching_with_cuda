@@ -2,7 +2,23 @@
 #include <cassert>
 #include "gpuFeatureMatcher.cuh"
 
-int main(void) {
+/*
+ *Pre-conditions:
+ *    `arr1` and `arr2` are each arrays of length `length`
+ *Post-conditions:
+ *    Returns the L2 distance of the two arrs interpreted as vectors.
+ */
+__device__ float deviceComputeL2Distance(float* arr1, float* arr2, int length) {
+    float ssd = 0;  // sum of squared distance
+    for (int i = 0; i < length; ++i) {
+        float currDistance = arr1[i] - arr2[i];
+        ssd += currDistance * currDistance;
+    }
+    return sqrtf(ssd);
+}
+
+
+int test(void) {
 
     int numDescriptors[] = {10, 20, 30, 40, 50};
     const int numImages = sizeof(numDescriptors) / sizeof(numDescriptors[0]);
@@ -85,6 +101,76 @@ int main(void) {
     FreeMatrix(&correspondenceMatH);
     FreeDeviceMatrix(&descriptorsD);
     FreeDeviceMatrix(&distanceMatD);
+    FreeDeviceMatrix(&correspondenceMatD);
+
+    /*cv::Mat image = cv::imread( "outputImages/result.jpg", 1 );*/
+    /*printf("size = (%i, %i)\n", image.rows, image.cols);*/
+
+
+    return 0;
+}
+
+
+int main(void) {
+
+    int numDescriptors[] = {2, 3, 4, 5};
+    const int numImages = sizeof(numDescriptors) / sizeof(numDescriptors[0]);
+    int k = 32;  // size of one descriptor
+    float matchConf = 0.1;
+
+    // Compute cumulative sum as input downstream
+    int cumNumDescriptors[numImages];
+    cumsum(numDescriptors, cumNumDescriptors, numImages);
+    int n = cumNumDescriptors[numImages-1];  // sum of all feature counts
+
+    cout << "Num descriptors:\n\t";
+    for (int i=0;i<numImages;++i) { cout << numDescriptors[i] << " "; }
+    cout << endl;
+
+    printf("n=%i, k=%i, numImages=%i\n", n, k, numImages);
+
+    Matrix<float> descriptorsH = AllocateMatrix<float>(n, k, 1);
+
+    // Initialize descriptors in device
+    Matrix<float> descriptorsD = AllocateDeviceMatrix<float>(descriptorsH);
+    CopyToDeviceMatrix(descriptorsD, descriptorsH);
+
+    // Compute correspondence matrix in host
+    Matrix<int> correspondenceMatH = AllocateMatrix<int>(numImages, n, 0);
+    computeCorrespondenceMatFromDescriptors(descriptorsH, cumNumDescriptors,
+            numImages, correspondenceMatH, matchConf);
+
+    // Compute correspondence matrix in device
+    Matrix<int> correspondenceMatD =
+        AllocateDeviceMatrix<int>(correspondenceMatH);
+    gpuComputeCorrespondenceMatFromDescriptors(descriptorsD, cumNumDescriptors,
+            numImages, correspondenceMatD, matchConf);
+
+    /*printf("Host correspondence mat:\n");*/
+    /*printMatrix(correspondenceMatH);*/
+    /*printf("Device correspondence mat:\n");*/
+    /*printMatrixD(correspondenceMatD);*/
+    printf("Error between correspondence mat in D and H = %f\n",
+            getRMSEHostAndDevice(correspondenceMatH, correspondenceMatD));
+
+    /*printf("Host descriptor mat:\n");*/
+    /*printMatrix(descriptorsH);*/
+    /*printf("Device descriptor mat:\n");*/
+    /*printMatrixD(descriptorsD);*/
+    printf("Error between descriptor in D and H = %f\n",
+            getRMSEHostAndDevice(descriptorsH, descriptorsD));
+
+    /*printCorrespondence(descriptorsH, numDescriptors, numImages, matchConf);*/
+
+    /*cpuComputeDistanceMat(descriptors, distanceMat);*/
+    /*computeCorrespondenceMat(distanceMat, cumNumDescriptors, numImages,*/
+            /*corrMat, matchConf);*/
+    /*std::cout << "corrMat:\n";*/
+    /*printMatrix(corrMat);*/
+
+    FreeMatrix(&descriptorsH);
+    FreeMatrix(&correspondenceMatH);
+    FreeDeviceMatrix(&descriptorsD);
     FreeDeviceMatrix(&correspondenceMatD);
 
     /*cv::Mat image = cv::imread( "outputImages/result.jpg", 1 );*/
