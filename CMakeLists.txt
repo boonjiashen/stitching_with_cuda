@@ -34,7 +34,7 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
 Include(ParallelUtils.cmake)
 enable_cuda_support()
-cuda_add_executable(tryGPUFeatureMatcher.out tryGPUFeatureMatcher.cu
+cuda_add_executable(timeGPUFeatureMatcher.out timeGPUFeatureMatcher.cu
     gpuFeatureMatcher.cuh cpuFeatureMatcher.h Matrix.h)
 #cuda_add_executable(gpuFeatureMatcher.out gpuFeatureMatcher.cu
     #cpuFeatureMatcher.h Matrix.h)
