@@ -194,9 +194,9 @@ int computeCorrespondenceScalar(const Matrix<float> descriptors,
  *Compute correspondence matrix given descriptors. This has better space
  *complexity than first computing the full distance matrix
  *Pre-conditions:
- *    `distanceMat` is a n x k matrix
+ *    `descriptors` is a n x k matrix
  *    cumNumDescriptors is an array of length `numImages`
- *    cumNumDescriptors[numImages-1] = distanceMat.height
+ *    cumNumDescriptors[numImages-1] = n
  *    correspondenceMat is a numImages x n matrix
  *Post-conditions:
  *    correspondenceMat[j][i] is the i-th feature's corresponding feature in
