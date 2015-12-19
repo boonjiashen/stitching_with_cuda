@@ -26,6 +26,7 @@ class CudaTimer {
         ticked = true;
     }
 
+    // Returns in milliseconds elapsed time since the last tic()
     float toc() {
         assert(ticked);
         float inclusive_timing; 
