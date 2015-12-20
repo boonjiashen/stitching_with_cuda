@@ -173,10 +173,9 @@ int computeCorrespondenceScalar(float* distances, int len, float matchConfidence
  */
 int computeCorrespondenceScalar(const Matrix<float> descriptors,
         int idxFrom, int idxToStart, int idxToStop, float matchConfidence) {
-    int n = descriptors.height;
-    assert(0 <= idxFrom < n);
-    assert(0 <= idxToStart < n);
-    assert(0 <= idxToStop < n);
+    assert(0 <= idxFrom < descriptors.height);
+    assert(0 <= idxToStart < descriptors.height);
+    assert(0 <= idxToStop < descriptors.height);
 
     int n_i = idxToStop - idxToStart;
     int k = descriptors.width;
