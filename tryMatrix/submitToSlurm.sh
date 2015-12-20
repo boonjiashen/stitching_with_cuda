@@ -6,8 +6,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --job-name=q2
-#SBATCH -o out%j
+#SBATCH -o %j.stdout
 
-cd $SLURM_SUBMIT_DIR/testMatrix
-./testMatrix.out
-#./testUnifiedMemory
+cd $SLURM_SUBMIT_DIR/tryMatrix
+./tryMatrix.out

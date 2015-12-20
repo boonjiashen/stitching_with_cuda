@@ -82,7 +82,7 @@ int testCorrMatFromDistanceMat(void) {
     return 0;
 }
 
-int main(void) {
+int testComputeCorrespondenceFromDescriptors(void) {
 
     int numDescriptors[] = {1500, 1500, 1500, 1500, 1500};
     const int numImages = sizeof(numDescriptors) / sizeof(numDescriptors[0]);
@@ -120,6 +120,8 @@ int main(void) {
     /*cv::Mat image = cv::imread( "outputImages/result.jpg", 1 );*/
     /*printf("size = (%i, %i)\n", image.rows, image.cols);*/
 
-
     return 0;
+}
+
+int main(void) {
 }

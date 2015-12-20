@@ -195,3 +195,55 @@ void FreeMatrix(Matrix<T>* M)
     free(M->elements);
     M->elements = NULL;
 }
+
+/*
+ *Transposes a matrix in-place
+ */
+template<typename T>
+void transpose(Matrix<T>& A) {
+    int newHeight = A.width;
+    int newWidth = A.height;
+    size_t memsize = newHeight * newWidth * sizeof(T);
+    T* newElements = (T*) malloc(memsize);
+
+#define TRANSFER() \
+    do { \
+        int dstJ = srcI; \
+        int dstI = srcJ; \
+        T* src = A.elements + srcJ * A.width + srcI; \
+        T* dst = newElements + dstJ * newWidth + dstI; \
+        *dst = *src; \
+    } while (0) \
+
+    // Transpose A[0:minDim][0:minDim]
+    int minDim = min(A.width, A.height);
+    for (int srcJ = 0; srcJ < minDim; ++srcJ) {
+        for (int srcI = 0; srcI < minDim; ++srcI) {
+            TRANSFER();
+        }
+    }
+
+    // Transpose right side of old matrix, A[:minDim][minDim:]
+    for (int srcJ = 0; srcJ < minDim; ++srcJ) {
+        for (int srcI = minDim; srcI < A.width; ++srcI) {
+            TRANSFER();
+        }
+    }
+
+    // Transpose bottom side of old matrix, A[minDim:][:minDim]
+    for (int srcJ = minDim; srcJ < A.height; ++srcJ) {
+        for (int srcI = 0; srcI < minDim; ++srcI ) {
+            TRANSFER();
+        }
+    }
+
+#undef TRANSFER
+
+    // Overwrite old width, height and elements
+    memcpy((void*)A.elements, (void*)newElements, memsize);
+    A.height = newHeight;
+    A.width = newWidth;
+
+    free(newElements);
+    newElements = NULL;
+}
