@@ -193,6 +193,101 @@ __global__ void kernelComputeCorrespondence(
 }
 
 /*
+ *See kernelComputeCorrespondence()
+ *This version moves one 'to' descriptor to shared memory per iteration of computing
+ *distance between the 'from' descriptor 'from' and a 'to' descriptor, to reduce
+ *trips to global memory
+ *Additional pre-conditions:
+ *    blockDim.x >= descriptors.width
+ *    shmem size = k * sizeof(float)
+ */
+__global__ void kernelComputeCorrespondence2(
+        const Matrix<float> descriptors,
+        Matrix<int> correspondenceVec,
+        int idxToStart, int idxToStop, float matchConfidence) {
+
+    extern __shared__ float shmem[];
+
+    int n = descriptors.height;
+    int k = descriptors.width;
+    assert(correspondenceVec.height == 1);
+    assert(correspondenceVec.width == n);
+    assert(idxToStart < idxToStop);
+    assert(0 <= idxToStart && idxToStart < n);
+    assert(0 < idxToStop && idxToStop <= n);
+    assert(blockDim.x <= k);
+
+    // We don't immediately return threads with ID >= n because we use them to
+    // bring data into shared memory in the for-loop
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+
+    float dist1 = FLT_MAX, dist2 = FLT_MAX; // smallest & 2nd smallest distance
+    int idx1 = -1;  // index of match with smallest distance
+    float* descriptorFrom = descriptors.elements + tid * k;
+    for (int j = idxToStart; j < idxToStop; ++j) {
+        
+        // Bring current descriptorTo to shared memory to reduce trips to
+        // global memory
+        if (threadIdx.x < k) {
+            shmem[threadIdx.x] = *(descriptors.elements + j * k + threadIdx.x);
+        }
+        __syncthreads();
+
+        if (tid >= n) { continue; }
+
+        float currDist = gpuComputeL2Distance(descriptorFrom, shmem, k);
+
+        if (currDist < dist1) {
+            dist2 = dist1;
+            dist1 = currDist;
+
+            // Decrement by idxToStart because we want correspondence to start from 0
+            // i.e. treat descriptors[idxToStart:idxToStop] as the descriptors
+            // 0 to idxToStop-idxToStart-1 of the 'from' image
+            idx1 = j - idxToStart;
+        }
+        else if (currDist < dist2) {
+            dist2 = currDist;
+        }
+    }
+
+    if (tid < n) {
+        int correspondence = (dist1 / dist2 < 1 - matchConfidence) ? idx1 : -1;
+        correspondenceVec.elements[tid] = correspondence;
+    }
+}
+
+/*
+ *See gpuComputeCorrespondenceMatFromDescriptors()
+ */
+void gpuComputeCorrespondenceMatFromDescriptors2(
+        const Matrix<float> descriptors,
+        int* cumNumDescriptors,
+        int numImages, Matrix<int> correspondenceMat, float matchConfidence) {
+    assert(correspondenceMat.height == numImages);
+    assert(correspondenceMat.width == descriptors.height);
+    assert(cumNumDescriptors[numImages-1] == descriptors.height);
+
+    int n = descriptors.height;
+    int k = descriptors.width;
+
+    dim3 dimGrid((n + BLOCK_SIZE - 1)/BLOCK_SIZE);
+    dim3 dimBlock(BLOCK_SIZE);
+    size_t shmem_size = k * sizeof(float);
+    for (int imgIdx = 0; imgIdx < numImages; ++imgIdx) {
+        int idxToStart = imgIdx > 0 ? cumNumDescriptors[imgIdx-1] : 0;
+        int idxToStop = cumNumDescriptors[imgIdx];
+
+        Matrix<int> correspondenceVec = getSubmatrix(correspondenceMat,
+                imgIdx, imgIdx+1);
+        kernelComputeCorrespondence<<<dimGrid,dimBlock,shmem_size>>>(
+                descriptors, correspondenceVec,
+                idxToStart, idxToStop, matchConfidence);
+    }
+
+}
+
+/*
  *Space-optimal feature matcher. Computes correspondence matrix directly from
  *descriptors.
  *A kernel is launched for every row in correspondenceMat. Every thread
