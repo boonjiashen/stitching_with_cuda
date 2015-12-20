@@ -26,8 +26,6 @@ void timeOneRunOfCorrespondenceFromDescriptors(
     const int k = descriptorDim;
     const int n = numDescriptorsPerImage * numImages;  // Total number of descriptors
 
-    const int epsilon = 0.001;  // amount of tolerable error
-
     // Compute cumulative sum as input downstream
     int cumNumDescriptors[numImages];
     for (int i=0;i<numImages;++i) { cumNumDescriptors[i]=(i+1)*n_i; }
@@ -50,7 +48,8 @@ void timeOneRunOfCorrespondenceFromDescriptors(
 
     // Compute correspondence matrix in device
     exclusiveTimer.tic();
-    gpuComputeCorrespondenceMatFromDescriptors(descriptorsD, cumNumDescriptors,
+    gpuComputeCorrespondenceMatFromDescriptors2(
+            descriptorsD, cumNumDescriptors,
             numImages, correspondenceMatD, matchConfidence);
     exclusiveTimingMS = exclusiveTimer.toc();
 
@@ -74,16 +73,16 @@ int main(void) {
     int k = 32;
     int n_i = 100;
     float matchConfidence = 0.1;
-    int numImagesVec[] = {10, 30, 100, 300, 1000, 3000};
     int numIters = 1;  // number of iterations per parameter set
     int runID = 0;
-    for (int i = 0; i < sizeof(numImagesVec) / sizeof(numImagesVec[0]); ++i) {
-        int numImages = numImagesVec[i];
+    for (int exponent = 1; exponent <= 8; exponent+=1) {
+        int base = 2;
+        int numImages = pow(base, exponent);
 
         for (int iterNum = 0; iterNum < numIters; ++iterNum) {
             timeOneRunOfCorrespondenceFromDescriptors(numImages, n_i, k,
                     matchConfidence, inclusiveTimingMS, exclusiveTimingMS);
-            printf("<run ID='%i' numImages='%i' numDescriptorsPerImage='%i' "
+            printf("<run isGPU='1' ID='%i' numImages='%i' numDescriptorsPerImage='%i' "
                     "descriptorDim='%i' matchConfidence='%f' "
                     "inclusiveTimingMS='%f' exclusiveTimingMS='%f' />\n",
                     runID, numImages, n_i, k, matchConfidence, inclusiveTimingMS,
