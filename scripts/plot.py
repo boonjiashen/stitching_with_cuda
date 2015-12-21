@@ -55,6 +55,8 @@ def main():
             DataGetter.get_gpu_timing('../timingFiles/gpuSpaceOptimized.stdout')
     occ_opt_n, occ_opt_inclusive_in_s, occ_opt_exclusive_in_s =  \
             DataGetter.get_gpu_timing('../timingFiles/gpuOccupancy.stdout')
+    mem_coa_n, mem_coa_inclusive_in_s, mem_coa_exclusive_in_s =  \
+            DataGetter.get_gpu_timing('../timingFiles/gpuCoalesced.stdout')
 
     # Plot
     plt.figure()
@@ -63,8 +65,9 @@ def main():
     ax.set_yscale('log', basex=10)
     ax.set_aspect('equal')
     ax.plot(cpu_n, cpu_timing_in_s, 'o-', label='CPU')
-    ax.plot(space_opt_n, space_opt_inclusive_in_s, 'o-', label="Space optimized")
-    ax.plot(occ_opt_n, occ_opt_inclusive_in_s, 'o-', label="Occupancy optimized")
+    ax.plot(space_opt_n, space_opt_inclusive_in_s, 'o-', label="Space-optimized")
+    ax.plot(occ_opt_n, occ_opt_inclusive_in_s, 'o-', label="Occupancy-optimized")
+    ax.plot(mem_coa_n, mem_coa_inclusive_in_s, 'o-', label="Memory-coalesced")
 
     plt.ylabel('Time (s)')
     plt.xlabel(r'$n = m \times n_i$')
