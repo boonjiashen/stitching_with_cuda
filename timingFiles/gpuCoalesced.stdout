@@ -1,0 +1,10 @@
+<run isGPU='1' ID='0' numImages='2' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='1.761568' exclusiveTimingMS='1.687296' />
+<run isGPU='1' ID='1' numImages='4' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='3.486336' exclusiveTimingMS='3.419360' />
+<run isGPU='1' ID='2' numImages='8' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='6.704416' exclusiveTimingMS='6.600928' />
+<run isGPU='1' ID='3' numImages='16' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='13.359936' exclusiveTimingMS='13.178912' />
+<run isGPU='1' ID='4' numImages='32' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='28.856544' exclusiveTimingMS='28.472609' />
+<run isGPU='1' ID='5' numImages='64' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='74.287903' exclusiveTimingMS='73.380386' />
+<run isGPU='1' ID='6' numImages='128' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='218.303558' exclusiveTimingMS='216.034561' />
+<run isGPU='1' ID='7' numImages='256' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='844.899719' exclusiveTimingMS='837.492615' />
+<run isGPU='1' ID='8' numImages='512' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='2977.833252' exclusiveTimingMS='2950.015137' />
+<run isGPU='1' ID='9' numImages='1024' numDescriptorsPerImage='100' descriptorDim='32' matchConfidence='0.100000' inclusiveTimingMS='11845.367188' exclusiveTimingMS='11740.713867' />
