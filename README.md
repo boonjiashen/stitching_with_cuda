@@ -13,7 +13,7 @@ Output images
 >> open result.jpg
 ```
 
-
+Slides [[link](https://drive.google.com/open?id=1amCMWRQyxwnu8AbeN6myjMdT64BYCb_nHBh_VRAnuIA)]
 Author
 ---
 Jia-Shen Boon
