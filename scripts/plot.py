@@ -51,8 +51,10 @@ class DataGetter():
 def main():
 
     cpu_n, cpu_timing_in_s = DataGetter.get_cpu_timing('../timingFiles/cpu.stdout')
-    gpu_n, gpu_inclusive_in_s, gpu_exclusive_in_s =  \
-            DataGetter.get_gpu_timing('../timingFiles/88878.stdout')
+    space_opt_n, space_opt_inclusive_in_s, space_opt_exclusive_in_s =  \
+            DataGetter.get_gpu_timing('../timingFiles/gpuSpaceOptimized.stdout')
+    occ_opt_n, occ_opt_inclusive_in_s, occ_opt_exclusive_in_s =  \
+            DataGetter.get_gpu_timing('../timingFiles/gpuOccupancy.stdout')
 
     # Plot
     plt.figure()
@@ -60,11 +62,14 @@ def main():
     ax.set_xscale('log', basex=10)
     ax.set_yscale('log', basex=10)
     ax.set_aspect('equal')
-    ax.plot(cpu_n, cpu_timing_in_s, 'o')
-    ax.plot(gpu_n, gpu_inclusive_in_s, 'o-')
-    #ax.plot(gpu_n, gpu_exclusive_in_s, 'o')
-    #plt.ylim(1, plt.ylim()[-1])
-    #plt.xlim(1, plt.xlim()[-1])
+    ax.plot(cpu_n, cpu_timing_in_s, 'o-', label='CPU')
+    ax.plot(space_opt_n, space_opt_inclusive_in_s, 'o-', label="Space optimized")
+    ax.plot(occ_opt_n, occ_opt_inclusive_in_s, 'o-', label="Occupancy optimized")
+
+    plt.ylabel('Time (s)')
+    plt.xlabel(r'$n = m \times n_i$')
+    plt.legend(loc='best')
+    plt.title('Performance timings')
     plt.show()
     
 if __name__ == "__main__":
