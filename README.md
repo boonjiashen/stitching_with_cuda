@@ -9,7 +9,7 @@ Run
 ---
 All development in this project was done on Wisconsin's commodity cluster Euler
 [[link](http://wacc.wisc.edu/docs/)], where jobs are executed through the job
-scheduler Slurm [[link](http://wacc.wisc.edu/docs/)].
+scheduler Slurm.
 
 ```
 >> cmake -DCMAKE_BUILD_TYPE=Release .
