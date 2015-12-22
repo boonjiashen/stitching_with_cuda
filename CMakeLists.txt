@@ -18,32 +18,16 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     FILE(GLOB OpenCV_LIBS /home/jiashen/opencv/lib/*) # The following variable is visible even in subdirs
 endif()
 
-#include( GenericDebugger.cmake )
-
-# Otherwise we can't use C++11 features
-#set(CMAKE_CXX_FLAGS "-std=c++11")
-
 #add_executable( feature_matching feature_matching.cpp )
 #target_link_libraries( feature_matching ${OpenCV_LIBS} )
 
-#add_subdirectory(testUnifiedMemory)
-#add_subdirectory(testMatrix)
+#add_subdirectory(tryMatrix)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_20;-code=sm_20;-std=c++11)
-#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=compute_35;-code=sm_35,compute_35;-m=32)
-#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
 Include(ParallelUtils.cmake)
 enable_cuda_support()
 cuda_add_executable(timeGPUFeatureMatcher.out timeGPUFeatureMatcher.cu
     gpuFeatureMatcher.cuh cpuFeatureMatcher.h Matrix.h)
-#cuda_add_executable(gpuFeatureMatcher.out gpuFeatureMatcher.cu
-    #cpuFeatureMatcher.h Matrix.h)
 
 # Otherwise we can't use C++11 features
 set(CMAKE_CXX_FLAGS "-std=c++11")
-
-#add_executable( feature_matching feature_matching.cpp )
-#target_link_libraries( feature_matching ${OpenCV_LIBS} )
-
-#add_subdirectory(testUnifiedMemory)
-#add_subdirectory(tryMemoryAllocationError)
